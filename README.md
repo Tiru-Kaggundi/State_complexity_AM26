@@ -1,157 +1,197 @@
-# State complexity, FY26 (AM26)
+# Economic complexity of Indian states, FY2025-26
 
-Economic complexity of Indian states from FY2025-26 export data, and how it
-relates to income (GSDP per capita) and poverty (NITI Aayog MPI).
+Do Indian states that export more complex products tend to be richer and less poor?
+This repository measures the **economic complexity (ECI)** of every Indian state and
+union territory from its FY2025-26 exports at the 6-digit product level, and compares
+it with **per capita income** (NSDP) and **multidimensional poverty** (NITI Aayog MPI).
 
-This updates the analysis behind the Indian Westerlies post
-[Why Some Indian States Are Richer Than Others](https://indianwesterlies.substack.com/p/why-some-indian-states-are-richer),
-which used FY25 data at HS4. This version uses FY26 data at **HS6**.
+It is the code and data behind the Indian Westerlies posts on this question. It
+replaces the earlier analysis (FY2024-25 exports at 4-digit level) used in
+[Why Some Indian States Are Richer Than Others](https://indianwesterlies.substack.com/p/why-some-indian-states-are-richer);
+see [Corrections to the earlier post](#corrections-to-the-earlier-post).
 
-## Method (planned)
+Everything here can be rebuilt from public data with the scripts in `scripts/`.
 
-1. **State exports**: DGCI&S state-of-origin exports, April 2025 to March 2026,
-   state x HS6 (ITC-HS, HS 2022 basis).
-2. **Product complexity (PCI) at HS6**: computed from world trade in
-   CEPII BACI (HS22 edition), using the Hidalgo-Hausmann eigenvector method on
-   the country x product RCA matrix, with standard filters for small countries
-   and products. Fallback if HS6 does not work well: OEC PCI at HS4.
-3. **State ECI**: RCA of each state against India's total; state ECI is the
-   mean PCI of the HS6 products where the state has RCA >= 1 (the OEC approach
-   for sub-national regions).
-4. **Plots**: state ECI against log GSDP per capita and MPI headcount ratio,
-   bubbles sized by exports, with and without small NE states/UTs.
+## Headline results
 
-## Status
+States with FY2025-26 exports of at least US$ 1 billion (bubble size = exports):
 
-- [x] Raw data added and cleaned (`data/processed/state_hs6_exports_am26.csv`)
-- [x] HS6 PCI from BACI HS22, validated against OEC
-  (see `outputs/validation/pci_hs6_validation.md`)
-- [x] State RCA and ECI at HS6, all 36 states/UTs kept (`data/processed/state_eci_am26.csv`)
-- [x] RBI Handbook tables downloaded: MPI (Table 10), per capita NSDP (Table 19), GSDP (Table 21)
-- [x] State panel: ECI + per capita NSDP 2023-24 + MPI headcount 2019-21 (`data/processed/state_panel_am26.csv`)
-- [x] Plots (`outputs/figures/`), fit statistics in `outputs/figures/fit_stats.md`
+![Complexity vs income](outputs/figures/main_eci_vs_nsdp.png)
 
-## Layout
+![Complexity vs poverty](outputs/figures/main_eci_vs_mpi.png)
 
-```
-data/
-  raw/dgcis_am26/          DGCI&S downloads, unmodified (7 parts)
-  reference/               lookup tables (state name mapping)
-  processed/               clean outputs produced by scripts/
-  external/                large downloads such as BACI (not committed)
-scripts/
-  clean_dgcis_am26.py      raw .xls -> tidy CSV, with validation checks
-  fetch_oec_reference.py   OEC PCI/ECI (HS 2022, HS6 and HS4) for validation
-  aggregate_baci.py        BACI bilateral flows -> exports by country x HS6 x year
-  complexity.py            RCA, Hidalgo-Hausmann ECI/PCI, HS6 code alignment
-  compute_pci_hs6.py       HS6 PCI and country ECI + validation report
-  compute_state_eci.py     state RCA at HS6 and state ECI (mean PCI of RCA >= 1 products)
-  fetch_rbi_handbook.py    RBI Handbook of Statistics on Indian States: MPI, NSDP, GSDP
-  build_state_panel.py     one table per state: ECI, income, poverty, plot flags
-  plot_state_eci.py        the four charts + fit statistics
-outputs/
-  validation/              validation reports
-  figures/                 plots
-```
+| chart | states | R² |
+|---|---|---|
+| ECI vs per capita NSDP (log), main | 21 | 0.45 |
+| ECI vs MPI headcount ratio, main | 22 | 0.21 |
+| ECI vs per capita NSDP, all states/UTs | 34 | 0.19 |
+| ECI vs MPI headcount ratio, all states/UTs | 36 | 0.15 |
+
+- Among the main states, a 0.1 higher ECI goes with about 20% higher per capita NSDP.
+- Furthest below the income line: Uttar Pradesh (1.5 standard deviations under it;
+  the line predicts about 1.8 times its actual income), then Jharkhand and Bihar.
+- Furthest above it: Kerala (2.4 standard deviations), then Delhi and Tamil Nadu.
+- These are correlations across about 20 states. They do not show that complexity
+  causes income or lower poverty.
+
+Full numbers: `outputs/figures/fit_stats.md`. Charts with all states/UTs:
+`outputs/figures/full_eci_vs_nsdp.png`, `outputs/figures/full_eci_vs_mpi.png`.
+
+## How it works, in plain words
+
+1. **What each state exports.** DGCI&S publishes exports by state of origin and
+   product. We use April 2025 to March 2026 at HS6 (about 5,200 product codes).
+2. **How complex each product is (PCI).** A product is complex if few countries
+   export it competitively, and those that do also export many other things.
+   We compute this from world trade (CEPII BACI, 2022-2024 average, 130 countries,
+   4,673 HS6 products) with the standard Hidalgo-Hausmann method. Our numbers match
+   the Observatory of Economic Complexity's published HS6 PCI closely (r = 0.99).
+3. **Which products each state is good at.** A state has a revealed comparative
+   advantage (RCA) in a product if that product's share in the state's exports is
+   at least its share in India's exports.
+4. **State ECI** = the average PCI of the products where the state has RCA >= 1.
+   This is how OEC measures complexity for regions inside a country: product
+   complexity comes from the world, state specialisation from Indian data.
+5. **Compare** with per capita NSDP (2023-24) and MPI headcount ratio (2019-21)
+   from the RBI Handbook of Statistics on Indian States.
 
 ## Reproduce
 
+Requires Python 3.10+ and about 2 GB of free disk for the world trade download.
+
 ```bash
 pip install -r requirements.txt
+
+# 1. State exports: raw files are in the repo
 python scripts/clean_dgcis_am26.py
 
-# HS6 PCI: download BACI HS22 (about 300 MB zip, 1.1 GB unzipped) once
-mkdir -p data/external/baci && cd data/external/baci
-curl -LO https://www.cepii.fr/DATA_DOWNLOAD/baci/data/BACI_HS22_V202601.zip
-unzip BACI_HS22_V202601.zip && cd ../../..
-python scripts/fetch_oec_reference.py
+# 2. Product complexity from world trade (one-time download, ~300 MB zip)
+mkdir -p data/external/baci
+curl -L -o data/external/baci/BACI_HS22_V202601.zip \
+  https://www.cepii.fr/DATA_DOWNLOAD/baci/data/BACI_HS22_V202601.zip
+unzip data/external/baci/BACI_HS22_V202601.zip -d data/external/baci
+python scripts/fetch_oec_reference.py     # OEC benchmarks for validation
 python scripts/aggregate_baci.py
 python scripts/compute_pci_hs6.py
+
+# 3. State ECI, income and poverty, charts
 python scripts/compute_state_eci.py
 python scripts/fetch_rbi_handbook.py
 python scripts/build_state_panel.py
 python scripts/plot_state_eci.py
 ```
 
-## Data: `data/processed/state_hs6_exports_am26.csv`
+Step 2's outputs are committed (`data/processed/pci_hs6.csv` and the collapsed
+BACI file), so steps 1 and 3 run without the large download. `fetch_oec_reference.py`
+and `fetch_rbi_handbook.py` call public websites that are occasionally slow; both retry.
 
-One row per state x HS6 product (67,188 rows, 37 states/UTs, 5,216 HS6 codes,
-total about US$ 441.5 bn).
+## Data sources
 
-| column | meaning |
-|---|---|
-| `fy` | financial year, `2025-26` |
-| `state` | standardised state/UT name |
-| `type` | `State`, `UT`, or `Unspecified` (exports with no state of origin, about US$ 4.3 bn) |
-| `state_raw` | name as it appears in the DGCI&S file |
-| `hs2`, `hs4`, `hs6` | HS code at 2, 4 and 6 digits (text, leading zeros kept) |
-| `description` | DGCI&S commodity description, whitespace cleaned (the portal cuts these at about 60 characters) |
-| `export_usd`, `export_inr` | exports April 2025 to March 2026, in US$ and rupees |
-
-The DGCI&S download also reports March 2026 on its own in separate columns.
-Those are dropped: the April-March columns already include March. Checks:
-full-year total US$ 441.5 bn (₹ 39.0 lakh crore); March alone was US$ 38.9 bn.
-
-Known quirks kept as-is: 75 rows show US$ 0 with a small positive rupee value
-(rounding in the source).
-
-`data/processed/state_totals_am26.csv` has one row per state with total
-exports and the number of HS6 and HS4 products exported.
-
-## HS6 product complexity (PCI)
-
-Built from CEPII BACI, HS 2022 codes, version 202601 (years 2022-2024).
-
-- **Exports**: averaged over 2022-2024 by country and HS6.
-- **Countries**: the 130 in OEC's HS22 HS6 ECI ranking in all three years
-  (OEC has already removed small and unreliable reporters).
-- **Products**: 4,673 HS6 lines with average world trade of at least US$ 100 M.
-- **Method**: RCA >= 1, then the Hidalgo-Hausmann eigenvector method
-  (`scripts/complexity.py`); PCI and ECI are z-scores.
-
-Validation (full report in `outputs/validation/pci_hs6_validation.md`):
-
-| check | result |
-|---|---|
-| Same method on OEC's own 2024 sample vs OEC 2024 PCI | r = 0.96 |
-| Our 2022-24 PCI vs OEC's 2022-24 average PCI | r = 0.99 |
-| Our country ECI vs OEC ECI | r = 0.997; Japan, Switzerland, Taiwan, Germany, Korea on top; India 40th of 130 |
-| Our HS6 PCI averaged up to HS4 vs OEC HS4 PCI | r = 0.96 |
-| Share of India's FY26 state exports with a PCI | 99.6% |
-
-BACI and OEC merge all petroleum oils (2710.12, 2710.19) into one code, 271000;
-India's data keeps them separate (US$ 49 bn, mostly Gujarat). Codes without a
-PCI are therefore mapped to their heading's "xxxx00" code (`align_hs6`).
-
-Outputs:
-
-- `data/processed/pci_hs6.csv`: `hs6, hs4, description, pci, ubiquity, world_trade_usd, oec_pci_2022_24`
-- `data/processed/eci_countries_hs6.csv`: country ECI, diversity, rank, OEC ECI
-- `data/processed/baci_hs22_exports_country_hs6.csv.gz`: BACI collapsed to
-  year x country x HS6 (`export_usd`), so the PCI can be recomputed without the
-  large download. BACI is published under the Etalab Open Licence 2.0
-  (Gaulier and Zignago, 2010, CEPII Working Paper 2010-23).
-
-## State ECI, income and poverty
-
-- **State ECI** (`data/processed/state_eci_am26.csv`): RCA of each state against
-  India's total at HS6; ECI = mean world PCI of products with RCA >= 1. All 36
-  states/UTs are kept. Small exporters rest on few products (`n_products_rca`),
-  e.g. Lakshadweep 1, Ladakh 3, several north-eastern states 10-40.
-- **Income**: per capita NSDP, current prices, 2023-24 (RBI Handbook Table 19).
-  RBI does not publish GSDP per capita, and the Handbook has no population table.
-  Gujarat has no 2023-24 value: its 2022-23 value (Rs 272,451) is grown one year
-  at 9.0%, its average annual growth 2017-18 to 2022-23, giving Rs 297,010.
-  No NSDP is published for Lakshadweep or Dadra and Nagar Haveli and Daman and Diu.
-- **Poverty**: MPI headcount ratio, NFHS-5 (2019-21), NITI Aayog National MPI
-  2023 (RBI Handbook Table 10).
-
-| chart | states shown | R² |
+| data | source | used for |
 |---|---|---|
-| `main_eci_vs_nsdp.png` | exports >= US$ 1 bn (21 with NSDP) | 0.45 |
-| `main_eci_vs_mpi.png` | exports >= US$ 1 bn (22) | 0.21 |
-| `full_eci_vs_nsdp.png` | all with NSDP (34) | 0.19 |
-| `full_eci_vs_mpi.png` | all (36) | 0.15 |
+| Exports by state of origin x HS6, Apr 2025 to Mar 2026 | DGCI&S, Ministry of Commerce (downloaded Nov 2026; raw files in `data/raw/dgcis_am26/`) | state specialisation |
+| World trade by country x HS6, 2022-2024 | CEPII BACI, HS22, version 202601 (Gaulier & Zignago 2010); Etalab Open Licence 2.0 | product complexity |
+| PCI and ECI at HS6/HS4, HS22 | Observatory of Economic Complexity (oec.world) | country sample and validation |
+| Per capita NSDP, current prices | RBI Handbook of Statistics on Indian States 2024-25, Table 19 | income |
+| MPI headcount ratio, NFHS-5 (2019-21) | NITI Aayog, National Multidimensional Poverty Index 2023, via RBI Handbook Table 10 | poverty |
 
-The equation and R² are printed on a chart only when R² >= 0.4 (currently only
-the main income chart). Colours use one ECI scale across all charts.
+## Choices and limitations
+
+Please read these before quoting the results.
+
+- **Goods only.** Exports cover merchandise, not services. States with large IT or
+  tourism economies (Karnataka, Kerala, Goa, Telangana, Delhi) are only partly
+  described by their goods exports.
+- **Exports are a proxy for production.** Products made and sold within India do
+  not appear. DGCI&S assigns exports to the state of origin reported for each
+  shipment.
+- **Different years.** Exports are FY2025-26, product complexity 2022-24, income
+  2023-24, poverty 2019-21 (the latest MPI available).
+- **Income is NSDP, not GSDP.** RBI publishes per capita *net* state domestic
+  product; it does not publish GSDP per capita.
+- **Gujarat's income is estimated.** RBI has no 2023-24 figure for Gujarat. We grow
+  its 2022-23 value (Rs 272,451) by 9.0%, its average annual growth over 2017-18 to
+  2022-23, giving Rs 297,010.
+- **No income data** for Lakshadweep and Dadra and Nagar Haveli and Daman and Diu;
+  they appear only in the poverty charts.
+- **Small exporters are noisy.** State ECI is a simple average over products with
+  RCA >= 1, so a state exporting a handful of products (Lakshadweep 1, Ladakh 3,
+  several north-eastern states 10-40) gets an unreliable value. This is why the main
+  charts show only states exporting at least US$ 1 billion. All states are kept in
+  `data/processed/state_eci_am26.csv`.
+- **Big products do not dominate.** Because ECI is an unweighted average, a state's
+  largest export counts the same as its smallest product with RCA >= 1.
+- **Merged codes.** BACI and OEC report all refined petroleum (HS 2710) as one code,
+  271000, so India's 2710.12 and 2710.19 are mapped to it. In total 99.6% of state
+  export value gets a PCI.
+- **Our PCI is close to OEC's but not identical.** OEC does not document its exact
+  product filter; we keep products with at least US$ 100 million of world trade.
+- **Correlation, not causation.**
+
+## Corrections to the earlier post
+
+The earlier post (FY2024-25, HS4) had these problems, which this version fixes:
+
+- **Some MPI values were wrong.** Several states were entered from the older
+  NFHS-4 (2015-16) column or mistyped, including Uttar Pradesh (shown as about 37.7%;
+  the NFHS-5 figure is 22.9%), Assam, Chhattisgarh, Odisha, Rajasthan, Nagaland and
+  Meghalaya. All values now come from NFHS-5 programmatically.
+- **The income measure was mislabelled.** The charts said GSDP per capita, but the
+  data was per capita NSDP from the same RBI table. It is now labelled correctly.
+- **Mixed years.** Income used each state's latest available year (2022-23 to
+  2024-25). It now uses 2023-24 for all states.
+- **Code link.** The post linked to `Tiru-Kaggundi/State_exports`, which holds only
+  port and country data. This repository is the right one.
+
+The ECI values here are not directly comparable with the earlier post's: the year,
+the product detail (HS6 instead of HS4) and the source of product complexity all changed.
+
+## Repository layout
+
+```
+data/
+  raw/dgcis_am26/            DGCI&S downloads, unmodified (7 parts) + SOURCE.md
+  reference/state_names.csv  DGCI&S state names -> standard names
+  reference/oec/             OEC PCI/ECI benchmarks
+  reference/rbi/             RBI Handbook tables (MPI, NSDP, GSDP)
+  processed/                 outputs of the scripts (see below)
+  external/                  BACI download (not committed)
+scripts/
+  clean_dgcis_am26.py        raw .xls -> tidy CSV, with validation checks
+  fetch_oec_reference.py     OEC benchmarks
+  aggregate_baci.py          BACI bilateral flows -> exports by country x HS6 x year
+  complexity.py              RCA, Hidalgo-Hausmann ECI/PCI, HS code alignment
+  compute_pci_hs6.py         HS6 PCI and country ECI + validation report
+  compute_state_eci.py       state RCA and ECI
+  fetch_rbi_handbook.py      RBI MPI, NSDP and GSDP tables
+  build_state_panel.py       one row per state: ECI, income, poverty
+  plot_state_eci.py          the four charts + fit statistics
+outputs/
+  figures/                   charts (400 dpi) and fit_stats.md
+  validation/                pci_hs6_validation.md
+```
+
+Main processed files:
+
+| file | contents |
+|---|---|
+| `state_hs6_exports_am26.csv` | state x HS6 exports, FY2025-26 (US$ and Rs) |
+| `pci_hs6.csv` | product complexity for 4,673 HS6 products, with OEC's value alongside |
+| `eci_countries_hs6.csv` | country ECI from the same calculation (India 40th of 130) |
+| `state_eci_am26.csv` | state ECI, products exported, products with RCA >= 1 |
+| `state_products_rca_am26.csv` | every state x product RCA, with PCI |
+| `state_panel_am26.csv` | state ECI with income, poverty and chart flags |
+
+## Validation
+
+`outputs/validation/pci_hs6_validation.md` compares our product and country
+complexity with OEC's published figures, lists the most and least complex products,
+and reports how much of each state's exports has a PCI. In short: PCI r = 0.99 and
+country ECI r = 0.997 against OEC; Japan, Switzerland, Taiwan, Germany and Korea rank
+top; cocoa, raw cashew and natural rubber rank bottom.
+
+## Licence and citation
+
+Code: free to reuse with attribution. Data remain under their original terms
+(DGCI&S, CEPII BACI under Etalab 2.0, OEC, RBI). If you use this, please cite the
+Indian Westerlies post and this repository.

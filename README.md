@@ -63,7 +63,10 @@ total about US$ 441.5 bn).
 | `hs2`, `hs4`, `hs6` | HS code at 2, 4 and 6 digits (text, leading zeros kept) |
 | `description` | DGCI&S commodity description, whitespace cleaned (the portal cuts these at about 60 characters) |
 | `export_usd`, `export_inr` | exports April 2025 to March 2026, in US$ and rupees |
-| `mar26_export_usd`, `mar26_export_inr` | exports in March 2026 alone |
+
+The DGCI&S download also reports March 2026 on its own in separate columns.
+Those are dropped: the April-March columns already include March. Checks:
+full-year total US$ 441.5 bn (₹ 39.0 lakh crore); March alone was US$ 38.9 bn.
 
 Known quirks kept as-is: 75 rows show US$ 0 with a small positive rupee value
 (rounding in the source).

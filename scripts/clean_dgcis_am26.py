@@ -14,6 +14,9 @@ Problems in the raw files that this script fixes:
   - Commodity descriptions have stray/double spaces -> whitespace collapsed.
     (They are also cut at ~60 characters by the portal; that cannot be fixed here.)
   - Values are rupees and US dollars as text -> converted to integers.
+  - The portal also reports the last month (March 2026) in separate columns.
+    Only the April 2025 to March 2026 totals are kept; the March columns are
+    used for one sanity check and then dropped.
 
 The script stops with an error if any validation check fails.
 
@@ -41,7 +44,8 @@ COLUMNS = {
     "March, 26 Value(US $)": "mar26_export_usd",
     "March, 26 Value(INR)": "mar26_export_inr",
 }
-VALUE_COLS = ["export_usd", "export_inr", "mar26_export_usd", "mar26_export_inr"]
+VALUE_COLS = ["export_usd", "export_inr"]          # kept in the output (full year)
+MARCH_COLS = ["mar26_export_usd", "mar26_export_inr"]  # read for a check, then dropped
 
 
 def read_raw() -> pd.DataFrame:
@@ -82,12 +86,12 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
         df["description"].fillna("").str.replace(r"\s+", " ", regex=True).str.strip()
     )
 
-    for c in VALUE_COLS:
+    for c in VALUE_COLS + MARCH_COLS:
         df[c] = pd.to_numeric(df[c].str.strip(), errors="raise").astype("int64")
 
     df.insert(0, "fy", FY)
-    cols = ["fy", "state", "type", "state_raw", "hs2", "hs4", "hs6", "description"] + VALUE_COLS
-    return df[cols].sort_values(["state", "hs6"]).reset_index(drop=True)
+    cols = ["fy", "state", "type", "state_raw", "hs2", "hs4", "hs6", "description"]
+    return df[cols + VALUE_COLS + MARCH_COLS].sort_values(["state", "hs6"]).reset_index(drop=True)
 
 
 def validate(raw: pd.DataFrame, df: pd.DataFrame) -> None:
@@ -96,12 +100,14 @@ def validate(raw: pd.DataFrame, df: pd.DataFrame) -> None:
     checks["no duplicate state x hs6"] = not df.duplicated(["state", "hs6"]).any()
     checks["hs6 is 6 digits"] = df["hs6"].str.fullmatch(r"\d{6}").all()
     checks["no missing state"] = df["state"].notna().all()
-    checks["no negative values"] = (df[VALUE_COLS] >= 0).all().all()
+    checks["no negative values"] = (df[VALUE_COLS + MARCH_COLS] >= 0).all().all()
     for raw_col, col in COLUMNS.items():
-        if col in VALUE_COLS:
+        if col in VALUE_COLS + MARCH_COLS:
             raw_total = pd.to_numeric(raw[raw_col].str.strip()).sum()
             checks[f"total {col} matches raw"] = raw_total == df[col].sum()
+    # Confirms the full-year column is cumulative and already includes March
     checks["March <= full year (USD)"] = (df["mar26_export_usd"] <= df["export_usd"]).all()
+    checks["full-year total above US$ 400 bn"] = df["export_usd"].sum() > 400e9
 
     print("\nValidation:")
     for name, ok in checks.items():
@@ -115,6 +121,8 @@ def main() -> None:
     raw = read_raw()
     df = clean(raw)
     validate(raw, df)
+    march_usd = df["mar26_export_usd"].sum()
+    df = df.drop(columns=MARCH_COLS)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out = OUT_DIR / "state_hs6_exports_am26.csv"
@@ -135,6 +143,7 @@ def main() -> None:
     print(f"\nWrote {out.relative_to(ROOT)}: {len(df):,} rows")
     print(f"  states/UTs: {df['state'].nunique()}  HS6: {df['hs6'].nunique():,}  HS4: {df['hs4'].nunique():,}")
     print(f"  total exports: US$ {df['export_usd'].sum() / 1e9:,.1f} bn")
+    print(f"  (March 2026 alone was US$ {march_usd / 1e9:,.1f} bn; dropped, already inside the full year)")
     print(f"  rows with zero US$ but positive INR: {((df.export_usd == 0) & (df.export_inr > 0)).sum()}")
 
 

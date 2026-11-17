@@ -24,7 +24,8 @@ which used FY25 data at HS4. This version uses FY26 data at **HS6**.
 ## Status
 
 - [x] Raw data added and cleaned (`data/processed/state_hs6_exports_am26.csv`)
-- [ ] HS6 PCI from BACI HS22
+- [x] HS6 PCI from BACI HS22, validated against OEC
+  (see `outputs/validation/pci_hs6_validation.md`)
 - [ ] State RCA and ECI
 - [ ] GSDP and MPI inputs
 - [ ] Plots
@@ -39,7 +40,13 @@ data/
   external/                large downloads such as BACI (not committed)
 scripts/
   clean_dgcis_am26.py      raw .xls -> tidy CSV, with validation checks
-outputs/figures/           plots
+  fetch_oec_reference.py   OEC PCI/ECI (HS 2022, HS6 and HS4) for validation
+  aggregate_baci.py        BACI bilateral flows -> exports by country x HS6 x year
+  complexity.py            RCA, Hidalgo-Hausmann ECI/PCI, HS6 code alignment
+  compute_pci_hs6.py       HS6 PCI and country ECI + validation report
+outputs/
+  validation/              validation reports
+  figures/                 plots
 ```
 
 ## Reproduce
@@ -47,6 +54,14 @@ outputs/figures/           plots
 ```bash
 pip install -r requirements.txt
 python scripts/clean_dgcis_am26.py
+
+# HS6 PCI: download BACI HS22 (about 300 MB zip, 1.1 GB unzipped) once
+mkdir -p data/external/baci && cd data/external/baci
+curl -LO https://www.cepii.fr/DATA_DOWNLOAD/baci/data/BACI_HS22_V202601.zip
+unzip BACI_HS22_V202601.zip && cd ../../..
+python scripts/fetch_oec_reference.py
+python scripts/aggregate_baci.py
+python scripts/compute_pci_hs6.py
 ```
 
 ## Data: `data/processed/state_hs6_exports_am26.csv`
@@ -73,3 +88,37 @@ Known quirks kept as-is: 75 rows show US$ 0 with a small positive rupee value
 
 `data/processed/state_totals_am26.csv` has one row per state with total
 exports and the number of HS6 and HS4 products exported.
+
+## HS6 product complexity (PCI)
+
+Built from CEPII BACI, HS 2022 codes, version 202601 (years 2022-2024).
+
+- **Exports**: averaged over 2022-2024 by country and HS6.
+- **Countries**: the 130 in OEC's HS22 HS6 ECI ranking in all three years
+  (OEC has already removed small and unreliable reporters).
+- **Products**: 4,673 HS6 lines with average world trade of at least US$ 100 M.
+- **Method**: RCA >= 1, then the Hidalgo-Hausmann eigenvector method
+  (`scripts/complexity.py`); PCI and ECI are z-scores.
+
+Validation (full report in `outputs/validation/pci_hs6_validation.md`):
+
+| check | result |
+|---|---|
+| Same method on OEC's own 2024 sample vs OEC 2024 PCI | r = 0.96 |
+| Our 2022-24 PCI vs OEC's 2022-24 average PCI | r = 0.99 |
+| Our country ECI vs OEC ECI | r = 0.997; Japan, Switzerland, Taiwan, Germany, Korea on top; India 40th of 130 |
+| Our HS6 PCI averaged up to HS4 vs OEC HS4 PCI | r = 0.96 |
+| Share of India's FY26 state exports with a PCI | 99.6% |
+
+BACI and OEC merge all petroleum oils (2710.12, 2710.19) into one code, 271000;
+India's data keeps them separate (US$ 49 bn, mostly Gujarat). Codes without a
+PCI are therefore mapped to their heading's "xxxx00" code (`align_hs6`).
+
+Outputs:
+
+- `data/processed/pci_hs6.csv`: `hs6, hs4, description, pci, ubiquity, world_trade_usd, oec_pci_2022_24`
+- `data/processed/eci_countries_hs6.csv`: country ECI, diversity, rank, OEC ECI
+- `data/processed/baci_hs22_exports_country_hs6.csv.gz`: BACI collapsed to
+  year x country x HS6 (`export_usd`), so the PCI can be recomputed without the
+  large download. BACI is published under the Etalab Open Licence 2.0
+  (Gaulier and Zignago, 2010, CEPII Working Paper 2010-23).

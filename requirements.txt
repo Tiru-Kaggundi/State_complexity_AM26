@@ -2,3 +2,5 @@ pandas>=2.0
 numpy>=1.24
 xlrd>=2.0      # reads the legacy .xls files from the DGCI&S portal
 matplotlib>=3.7
+duckdb>=1.0     # fast aggregation of the BACI CSVs
+requests>=2.31  # OEC API

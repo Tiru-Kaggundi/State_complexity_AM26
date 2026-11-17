@@ -13,7 +13,7 @@ Furthest below / above the line (residual in standard deviations):
 - Tamil Nadu: +1.24
 - Delhi: +1.55
 - Kerala: +2.42
-- Uttar Pradesh: actual ₹97,364, line predicts ₹179,488 (1.84x actual)
+- Uttar Pradesh: actual ₹97,364, line predicts ₹179,487 (1.84x actual)
 
 ## main_eci_vs_mpi
 
@@ -30,7 +30,7 @@ Furthest below / above the line (residual in standard deviations):
 
 ## full_eci_vs_nsdp
 
-n = 34, slope = 123918.703, intercept = 267581.378, R² = 0.187
+n = 34, slope = 123918.712, intercept = 267581.377, R² = 0.187
 
 Furthest below / above the line (residual in standard deviations):
 

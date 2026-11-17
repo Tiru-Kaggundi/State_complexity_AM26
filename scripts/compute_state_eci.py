@@ -62,7 +62,7 @@ def main() -> None:
         ["state", "type", "export_usd", "n_products_exported", "n_products_rca",
          "eci", "eci_std", "pci_coverage"]
     ]
-    out.to_csv(PROC / "state_eci_am26.csv", index=False)
+    out.round({"eci": 6, "eci_std": 6}).to_csv(PROC / "state_eci_am26.csv", index=False)
 
     long = rca.stack().rename("rca").reset_index()
     long = long[long["rca"] > 0].rename(columns={"pci_code": "hs6"})

@@ -1,6 +1,8 @@
 pandas>=2.0
 numpy>=1.24
-xlrd>=2.0      # reads the legacy .xls files from the DGCI&S portal
+xlrd>=2.0         # reads the legacy .xls files from the DGCI&S portal
+lxml>=4.9         # reads the RBI tables (pandas.read_html)
 matplotlib>=3.7
-duckdb>=1.0     # fast aggregation of the BACI CSVs
-requests>=2.31  # OEC API
+adjustText>=1.0   # keeps state labels on the charts from overlapping
+duckdb>=1.0       # fast aggregation of the BACI CSVs
+requests>=2.31    # OEC and RBI downloads

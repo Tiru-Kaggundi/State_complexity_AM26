@@ -5,12 +5,11 @@ This repository measures the **economic complexity (ECI)** of every Indian state
 union territory from its FY2025-26 exports at the 6-digit product level, and compares
 it with **per capita income** (NSDP) and **multidimensional poverty** (NITI Aayog MPI).
 
-It is the code and data behind the Indian Westerlies posts on this question. It
-replaces the earlier analysis (FY2024-25 exports at 4-digit level) used in
-[Why Some Indian States Are Richer Than Others](https://indianwesterlies.substack.com/p/why-some-indian-states-are-richer);
-see [Corrections to the earlier post](#corrections-to-the-earlier-post).
-
-Everything here can be rebuilt from public data with the scripts in `scripts/`.
+This is the code and data behind the Indian Westerlies post
+**Why High-Tech Matters for Growth: Evidence from Indian States**
+([indianwesterlies.substack.com](https://indianwesterlies.substack.com)).
+Every number and chart in that post can be rebuilt from public data with the
+scripts in `scripts/`; see [Where each number in the post comes from](#where-each-number-in-the-post-comes-from).
 
 ## Headline results
 
@@ -27,12 +26,21 @@ States with FY2025-26 exports of at least US$ 1 billion (bubble size = exports):
 | ECI vs per capita NSDP, all states/UTs | 34 | 0.19 |
 | ECI vs MPI headcount ratio, all states/UTs | 36 | 0.15 |
 
-- Among the main states, a 0.1 higher ECI goes with about 20% higher per capita NSDP.
-- Furthest below the income line: Uttar Pradesh (1.5 standard deviations under it;
-  the line predicts about 1.8 times its actual income), then Jharkhand and Bihar.
-- Furthest above it: Kerala (2.4 standard deviations), then Delhi and Tamil Nadu.
+- **Income.** Among the main states, a 0.1 higher ECI goes with about 20% higher
+  per capita NSDP. Complexity accounts for a little under half the variation.
+- **Below the income line.** Uttar Pradesh is furthest below it (1.5 standard
+  deviations; the line predicts about 1.8 times its actual income), then Jharkhand
+  and Bihar.
+- **Above the income line.** Kerala (2.4 standard deviations), then Delhi and Tamil
+  Nadu. Remittances, tourism and services do not appear in goods exports.
+- **Poverty.** A 0.1 higher ECI goes with about 2 percentage points lower MPI
+  headcount, a looser link (R² 0.21). Bihar, Jharkhand and Uttar Pradesh are
+  poorer than the line predicts; Kerala and Tamil Nadu much less poor.
 - These are correlations across about 20 states. They do not show that complexity
-  causes income or lower poverty.
+  causes higher income or lower poverty.
+
+Fig 1 in the post (ECI vs GDP per capita across countries) is OEC's chart and is
+not produced here.
 
 Full numbers: `outputs/figures/fit_stats.md`. Charts with all states/UTs:
 `outputs/figures/full_eci_vs_nsdp.png`, `outputs/figures/full_eci_vs_mpi.png`.
@@ -54,6 +62,18 @@ Full numbers: `outputs/figures/fit_stats.md`. Charts with all states/UTs:
    complexity comes from the world, state specialisation from Indian data.
 5. **Compare** with per capita NSDP (2023-24) and MPI headcount ratio (2019-21)
    from the RBI Handbook of Statistics on Indian States.
+
+## Why 6-digit products matter
+
+Coarser product codes can hide very different products in one bucket. Two
+examples from `data/processed/pci_hs6.csv` (PCI is a z-score; 0 is average):
+
+| product | HS4 bucket PCI (OEC) | HS6 PCI (ours) |
+|---|---|---|
+| Smartphones (851713) | 0.57 (heading 8517, phones and network gear) | -0.18 |
+| Network switching/routing equipment (851762) | 0.57 | 0.52 |
+| Rough diamonds, non-industrial (710231) | -1.73 (heading 7102) | -1.65 |
+| Cut and polished diamonds (710239) | -1.73 | -0.58 |
 
 ## Reproduce
 
@@ -80,6 +100,10 @@ python scripts/fetch_rbi_handbook.py
 python scripts/build_state_panel.py
 python scripts/plot_state_eci.py
 ```
+
+This has been tested from a fresh clone in a clean Python environment; the
+results match the committed files (chart label positions may shift slightly
+between library versions).
 
 Step 2's outputs are committed (`data/processed/pci_hs6.csv` and the collapsed
 BACI file), so steps 1 and 3 run without the large download. `fetch_oec_reference.py`
@@ -128,9 +152,25 @@ Please read these before quoting the results.
   product filter; we keep products with at least US$ 100 million of world trade.
 - **Correlation, not causation.**
 
-## Corrections to the earlier post
+## Where each number in the post comes from
 
-The earlier post (FY2024-25, HS4) had these problems, which this version fixes:
+| in the post | value | file |
+|---|---|---|
+| exports covered | US$ 441.5 bn, Apr 2025 to Mar 2026; 5,216 HS6 codes | `data/processed/state_totals_am26.csv` |
+| countries and products used for complexity | 130 countries, 4,673 HS6 products | `outputs/validation/pci_hs6_validation.md` |
+| match with OEC | PCI correlation 0.99 | `outputs/validation/pci_hs6_validation.md` |
+| states in the main charts | 22 with exports >= US$ 1 bn, 99.6% of state exports | `data/processed/state_panel_am26.csv` (`in_main_plot`) |
+| income: share explained, slope | R² 0.45; 0.1 ECI ~ 20% higher NSDP | `outputs/figures/fit_stats.md` |
+| Uttar Pradesh below the line | 1.5 standard deviations; predicted 1.8x actual | `outputs/figures/fit_stats.md` |
+| UP's largest export | smartphones, US$ 4.46 bn | `data/processed/state_products_rca_am26.csv` |
+| poverty: share explained, slope | R² 0.21; 0.1 ECI ~ 2 points lower headcount | `outputs/figures/fit_stats.md` |
+| Gujarat income estimate | Rs 297,010 (2022-23 grown at 9.0%) | `data/processed/state_panel_am26.csv` (`nsdp_note`) |
+
+## About the earlier post
+
+An earlier Indian Westerlies post, [Why Some Indian States Are Richer Than Others](https://indianwesterlies.substack.com/p/why-some-indian-states-are-richer),
+asked the same question with FY2024-25 exports at the 4-digit level. It is
+superseded by this analysis. It had these problems, which this version fixes:
 
 - **Some MPI values were wrong.** Several states were entered from the older
   NFHS-4 (2015-16) column or mistyped, including Uttar Pradesh (shown as about 37.7%;

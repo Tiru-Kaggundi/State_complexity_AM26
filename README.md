@@ -26,8 +26,9 @@ which used FY25 data at HS4. This version uses FY26 data at **HS6**.
 - [x] Raw data added and cleaned (`data/processed/state_hs6_exports_am26.csv`)
 - [x] HS6 PCI from BACI HS22, validated against OEC
   (see `outputs/validation/pci_hs6_validation.md`)
-- [ ] State RCA and ECI
-- [ ] GSDP and MPI inputs
+- [x] State RCA and ECI at HS6, all 36 states/UTs kept (`data/processed/state_eci_am26.csv`)
+- [x] RBI Handbook tables downloaded: MPI (Table 10), per capita NSDP (Table 19), GSDP (Table 21)
+- [ ] Choose income/poverty measures and years, match state names
 - [ ] Plots
 
 ## Layout
@@ -44,6 +45,8 @@ scripts/
   aggregate_baci.py        BACI bilateral flows -> exports by country x HS6 x year
   complexity.py            RCA, Hidalgo-Hausmann ECI/PCI, HS6 code alignment
   compute_pci_hs6.py       HS6 PCI and country ECI + validation report
+  compute_state_eci.py     state RCA at HS6 and state ECI (mean PCI of RCA >= 1 products)
+  fetch_rbi_handbook.py    RBI Handbook of Statistics on Indian States: MPI, NSDP, GSDP
 outputs/
   validation/              validation reports
   figures/                 plots

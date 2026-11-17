@@ -1,0 +1,4 @@
+pandas>=2.0
+numpy>=1.24
+xlrd>=2.0      # reads the legacy .xls files from the DGCI&S portal
+matplotlib>=3.7

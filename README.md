@@ -6,8 +6,7 @@ union territory from its FY2025-26 exports at the 6-digit product level, and com
 it with **per capita income** (NSDP) and **multidimensional poverty** (NITI Aayog MPI).
 
 This is the code and data behind the Indian Westerlies post
-**Why High-Tech Matters for Growth: Evidence from Indian States**
-([indianwesterlies.substack.com](https://indianwesterlies.substack.com)).
+[Why High-Tech Manufacturing Matters for Growth: Evidence from Indian States](https://indianwesterlies.substack.com/p/why-high-tech-manufacturing-matters).
 Every number and chart in that post can be rebuilt from public data with the
 scripts in `scripts/`; see [Where each number in the post comes from](#where-each-number-in-the-post-comes-from).
 
